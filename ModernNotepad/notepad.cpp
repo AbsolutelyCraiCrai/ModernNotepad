@@ -489,7 +489,7 @@ void ModernNotepad::WriteSettings()
 
 	HANDLE hFile = CreateFileA(
 		"settings.dat",
-		FILE_WRITE_ACCESS,
+		FILE_ALL_ACCESS,
 		FILE_SHARE_READ,
 		NULL,
 		CREATE_ALWAYS,
