@@ -440,7 +440,7 @@ void ModernNotepad::SaveDocument()
 
 	HANDLE hFile = CreateFileA(
 		this->fileName.c_str(),
-		FILE_ALL_ACCESS,
+		FILE_READ_ACCESS | FILE_WRITE_ACCESS,
 		FILE_SHARE_READ,
 		NULL,
 		CREATE_ALWAYS,
@@ -489,7 +489,7 @@ void ModernNotepad::WriteSettings()
 
 	HANDLE hFile = CreateFileA(
 		"settings.dat",
-		FILE_ALL_ACCESS,
+		FILE_READ_ACCESS | FILE_WRITE_ACCESS,
 		FILE_SHARE_READ,
 		NULL,
 		CREATE_ALWAYS,
