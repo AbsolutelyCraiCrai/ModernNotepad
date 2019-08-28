@@ -188,9 +188,7 @@ void ModernNotepad::SetupXAML()
 	//
 	// Set our originalText variable to the current contents of the edit box
 	//
-	hstring text;
-	globals->editBox.Document().GetText(TextGetOptions::None, text);
-	this->originalText = to_string(text);
+	this->originalText = this->GetEditBoxContent();
 
 	Grid::SetRow(globals->editBox, 1);
 	globals->mainGrid.Children().Append(globals->editBox);
@@ -308,9 +306,7 @@ void ModernNotepad::NewDocument()
 	//
 	// Set the original text to the edit box's version of it
 	//
-	hstring text;
-	globals->editBox.Document().GetText(TextGetOptions::None, text);
-	this->originalText = to_string(text);
+	this->originalText = this->GetEditBoxContent();
 }
 
 void ModernNotepad::OpenDocument()
@@ -384,9 +380,7 @@ void ModernNotepad::OpenDocument()
 		//
 		// Set the original text to the edit box's version of it
 		//
-		hstring text;
-		globals->editBox.Document().GetText(TextGetOptions::None, text);
-		this->originalText = to_string(text);
+		this->originalText = this->GetEditBoxContent();
 
 		//
 		// Reset the changes flag
@@ -454,9 +448,7 @@ void ModernNotepad::SaveDocument()
 		return;
 	}
 
-	hstring text;
-	globals->editBox.Document().GetText(TextGetOptions::None, text);
-	this->originalText = to_string(text);
+	this->originalText = this->GetEditBoxContent();
 	const char* buffer = this->originalText.c_str();
 
 	DWORD written;
@@ -547,6 +539,13 @@ void ModernNotepad::ReadSettings()
 	globals->editBox.FontSize(settings.FontSize);
 }
 
+std::string ModernNotepad::GetEditBoxContent()
+{
+	hstring text;
+	globals->editBox.Document().GetText(TextGetOptions::None, text);
+	return to_string(text);
+}
+
 ContentDialog ModernNotepad::CreateCloseConfirmDialog()
 {
 	ContentDialog closeDlg;
@@ -617,9 +616,7 @@ void ModernNotepad::OnNewDocumentConfirm(Windows::Foundation::IInspectable const
 
 void ModernNotepad::OnTextChanged(Windows::Foundation::IInspectable const&, RoutedEventArgs const &args)
 {
-	hstring text;
-	globals->editBox.Document().GetText(TextGetOptions::None, text);
-	std::string ourText = to_string(text);
+	std::string ourText = this->GetEditBoxContent();
 
 	if (ourText != this->originalText)
 	{

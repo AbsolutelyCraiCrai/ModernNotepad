@@ -46,6 +46,7 @@ private:
 	void SaveDocument();
 	void WriteSettings();
 	void ReadSettings();
+	std::string GetEditBoxContent();
 	ContentDialog CreateCloseConfirmDialog();
 	void OnAboutMenuItemClick(Windows::Foundation::IInspectable const&, RoutedEventArgs const &args);
 	void OnExitMenuItemClick(Windows::Foundation::IInspectable const&, RoutedEventArgs const &args);
