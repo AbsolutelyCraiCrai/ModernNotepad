@@ -388,6 +388,8 @@ void ModernNotepad::OpenDocument()
 		this->changesMade = FALSE;
 		return;
 	}
+
+	free(ofn.lpstrFile);
 }
 
 void ModernNotepad::SaveDocumentAs()
