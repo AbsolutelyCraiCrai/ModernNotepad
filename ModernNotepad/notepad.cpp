@@ -13,6 +13,16 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR cmdLine
 
 	mainClass->SetupXAML();
 	mainClass->DockXAML();
+
+	//
+	// Get an array of commands via CommandLineToArgvW() so
+	// we can open a file if requested.
+	//
+	WCHAR* cmdLineW = GetCommandLineW();
+	int argc;
+	WCHAR** argv = CommandLineToArgvW(cmdLineW, &argc);
+	mainClass->ProcessArgs(argc, argv);
+
 	mainClass->Run();
 	return 0;
 }
@@ -288,6 +298,84 @@ LRESULT CALLBACK ModernNotepad::ActualWindowProc(HWND hwnd, UINT msg, WPARAM wPa
 	}
 
 	return DefWindowProc(hwnd, msg, wParam, lParam);
+}
+
+void ModernNotepad::ProcessArgs(int argc, WCHAR** argv)
+{
+	if (argc < 2)
+		return;
+
+	//
+	// We only care for the first argument...
+	//
+	WCHAR* fileName = argv[1];
+
+	//
+	// Does this file exist?
+	//
+	HANDLE hFile = CreateFileW(
+		fileName,
+		FILE_READ_ACCESS,
+		FILE_SHARE_READ,
+		NULL,
+		OPEN_EXISTING,
+		NULL,
+		NULL
+	);
+
+	if (hFile == INVALID_HANDLE_VALUE)
+		return;
+
+	//
+	// Yes, load it...
+	//
+	char* mbFileName = new char[lstrlenW(fileName) + 1];
+	size_t dummy;
+	wcstombs_s(&dummy, mbFileName, lstrlenW(fileName) + 1, fileName, lstrlenW(fileName));
+
+	std::string fileName_s;
+	fileName_s.append(mbFileName);
+	delete[] mbFileName;
+
+	this->fileName = fileName_s;
+
+	//
+	// TODO: Refactor this into a new method as both this
+	//       and OpenDocument() do the same thing.
+	//
+	LARGE_INTEGER fileSize;
+	GetFileSizeEx(hFile, &fileSize);
+
+	char* buffer = new char[fileSize.QuadPart + 1];
+
+	DWORD read;
+	ReadFile(
+		hFile,
+		buffer,
+		fileSize.QuadPart,
+		&read,
+		NULL
+	);
+
+	buffer[read] = '\0';
+
+	std::string buffer_s;
+	buffer_s.append(buffer);
+
+	CloseHandle(hFile);
+	delete[] buffer;
+
+	globals->editBox.Document().SetText(TextSetOptions::None, to_hstring(buffer_s));
+
+	//
+	// Set the original text to the edit box's version of it
+	//
+	this->originalText = this->GetEditBoxContent();
+
+	//
+	// Reset the changes flag
+	//
+	this->changesMade = FALSE;
 }
 
 void ModernNotepad::NewDocument()

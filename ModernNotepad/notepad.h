@@ -26,6 +26,7 @@ public:
 	void SetupXAML();
 	void DockXAML();
 	void Run();
+	void ProcessArgs(int argc, WCHAR** argv);
 
 private:
 	HWND hwnd;
