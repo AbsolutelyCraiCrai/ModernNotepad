@@ -338,44 +338,9 @@ void ModernNotepad::ProcessArgs(int argc, WCHAR** argv)
 	delete[] mbFileName;
 
 	this->fileName = fileName_s;
-
-	//
-	// TODO: Refactor this into a new method as both this
-	//       and OpenDocument() do the same thing.
-	//
-	LARGE_INTEGER fileSize;
-	GetFileSizeEx(hFile, &fileSize);
-
-	char* buffer = new char[fileSize.QuadPart + 1];
-
-	DWORD read;
-	ReadFile(
-		hFile,
-		buffer,
-		fileSize.QuadPart,
-		&read,
-		NULL
-	);
-
-	buffer[read] = '\0';
-
-	std::string buffer_s;
-	buffer_s.append(buffer);
+	this->LoadFile(hFile);
 
 	CloseHandle(hFile);
-	delete[] buffer;
-
-	globals->editBox.Document().SetText(TextSetOptions::None, to_hstring(buffer_s));
-
-	//
-	// Set the original text to the edit box's version of it
-	//
-	this->originalText = this->GetEditBoxContent();
-
-	//
-	// Reset the changes flag
-	//
-	this->changesMade = FALSE;
 }
 
 void ModernNotepad::NewDocument()
@@ -441,43 +406,47 @@ void ModernNotepad::OpenDocument()
 			return;
 		}
 
-		LARGE_INTEGER fileSize;
-		GetFileSizeEx(hFile, &fileSize);
-
-		char* buffer = new char[fileSize.QuadPart + 1];
-
-		DWORD read;
-		ReadFile(
-			hFile,
-			buffer,
-			fileSize.QuadPart,
-			&read,
-			NULL
-		);
-
-		buffer[read] = '\0';
-
-		std::string buffer_s;
-		buffer_s.append(buffer);
-
+		this->LoadFile(hFile);
 		CloseHandle(hFile);
-		delete[] buffer;
-
-		globals->editBox.Document().SetText(TextSetOptions::None, to_hstring(buffer_s));
-
-		//
-		// Set the original text to the edit box's version of it
-		//
-		this->originalText = this->GetEditBoxContent();
-
-		//
-		// Reset the changes flag
-		//
-		this->changesMade = FALSE;
 		return;
 	}
 
 	free(ofn.lpstrFile);
+}
+
+void ModernNotepad::LoadFile(HANDLE hFile)
+{
+	LARGE_INTEGER fileSize;
+	GetFileSizeEx(hFile, &fileSize);
+
+	char* buffer = new char[fileSize.QuadPart + 1];
+
+	DWORD read;
+	ReadFile(
+		hFile,
+		buffer,
+		fileSize.QuadPart,
+		&read,
+		NULL
+	);
+
+	buffer[read] = '\0';
+
+	std::string buffer_s;
+	buffer_s.append(buffer);
+	delete[] buffer;
+
+	globals->editBox.Document().SetText(TextSetOptions::None, to_hstring(buffer_s));
+
+	//
+	// Set the original text to the edit box's version of it
+	//
+	this->originalText = this->GetEditBoxContent();
+
+	//
+	// Reset the changes flag
+	//
+	this->changesMade = FALSE;
 }
 
 void ModernNotepad::SaveDocumentAs()

@@ -43,6 +43,7 @@ private:
 	LRESULT CALLBACK ActualWindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 	void NewDocument();
 	void OpenDocument();
+	void LoadFile(HANDLE hFile);
 	void SaveDocumentAs();
 	void SaveDocument();
 	void WriteSettings();
