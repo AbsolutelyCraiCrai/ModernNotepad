@@ -322,7 +322,10 @@ void ModernNotepad::ProcessArgs(int argc, WCHAR** argv)
 	ModernNotepadFile* file = new ModernNotepadFile(fileName_s, false);
 
 	if (!file->FileExists())
+	{
+		delete file;
 		return;
+	}
 
 	//
 	// Yes, load it...
