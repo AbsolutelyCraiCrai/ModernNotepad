@@ -81,10 +81,12 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="file.h" />
     <ClInclude Include="notepad.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="file.cpp" />
     <ClCompile Include="notepad.cpp" />
   </ItemGroup>
   <ItemGroup>

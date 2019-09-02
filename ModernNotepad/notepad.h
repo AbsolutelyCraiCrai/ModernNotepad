@@ -8,6 +8,7 @@
 #include <winrt/Windows.UI.Xaml.Input.h>
 #include <winrt/Windows.UI.Text.h>
 #include <windows.ui.xaml.hosting.desktopwindowxamlsource.h>
+#include "file.h"
 
 using namespace std;
 using namespace winrt;
@@ -43,7 +44,7 @@ private:
 	LRESULT CALLBACK ActualWindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 	void NewDocument();
 	void OpenDocument();
-	void LoadFile(HANDLE hFile);
+	void LoadFile(ModernNotepadFile* file);
 	void SaveDocumentAs();
 	void SaveDocument();
 	void WriteSettings();

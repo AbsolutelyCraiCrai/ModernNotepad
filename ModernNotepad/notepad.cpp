@@ -309,38 +309,28 @@ void ModernNotepad::ProcessArgs(int argc, WCHAR** argv)
 	// We only care for the first argument...
 	//
 	WCHAR* fileName = argv[1];
+	char* mbFileName = new char[lstrlenW(fileName) + 1];
+	size_t dummy;
+	wcstombs_s(&dummy, mbFileName, lstrlenW(fileName) + 1, fileName, lstrlenW(fileName));
+
+	std::string fileName_s(mbFileName);
+	delete[] mbFileName;
 
 	//
 	// Does this file exist?
 	//
-	HANDLE hFile = CreateFileW(
-		fileName,
-		FILE_READ_ACCESS,
-		FILE_SHARE_READ,
-		NULL,
-		OPEN_EXISTING,
-		NULL,
-		NULL
-	);
+	ModernNotepadFile* file = new ModernNotepadFile(fileName_s, false);
 
-	if (hFile == INVALID_HANDLE_VALUE)
+	if (!file->FileExists())
 		return;
 
 	//
 	// Yes, load it...
 	//
-	char* mbFileName = new char[lstrlenW(fileName) + 1];
-	size_t dummy;
-	wcstombs_s(&dummy, mbFileName, lstrlenW(fileName) + 1, fileName, lstrlenW(fileName));
-
-	std::string fileName_s;
-	fileName_s.append(mbFileName);
-	delete[] mbFileName;
 
 	this->fileName = fileName_s;
-	this->LoadFile(hFile);
-
-	CloseHandle(hFile);
+	this->LoadFile(file);
+	delete file;
 }
 
 void ModernNotepad::NewDocument()
@@ -383,58 +373,32 @@ void ModernNotepad::OpenDocument()
 		size_t dummy;
 		wcstombs_s(&dummy, mbFileName, ofn.nMaxFile + 1, ofn.lpstrFile, ofn.nMaxFile);
 
-		std::string fileName;
-		fileName.append(mbFileName);
+		std::string fileName(mbFileName);
 		delete[] mbFileName;
 		free(ofn.lpstrFile);
 
 		this->fileName = fileName;
 
-		HANDLE hFile = CreateFileA(
-			this->fileName.c_str(),
-			FILE_READ_ACCESS,
-			FILE_SHARE_READ,
-			NULL,
-			OPEN_EXISTING,
-			NULL,
-			NULL
-		);
+		ModernNotepadFile* file = new ModernNotepadFile(fileName, false);
 
-		if (hFile == INVALID_HANDLE_VALUE)
+		if (!file->FileExists())
 		{
 			MessageBox(this->hwnd, L"There was an error trying to open the file.", L"Error", MB_ICONERROR);
+			delete file;
 			return;
 		}
 
-		this->LoadFile(hFile);
-		CloseHandle(hFile);
+		this->LoadFile(file);
+		delete file;
 		return;
 	}
 
 	free(ofn.lpstrFile);
 }
 
-void ModernNotepad::LoadFile(HANDLE hFile)
+void ModernNotepad::LoadFile(ModernNotepadFile* file)
 {
-	LARGE_INTEGER fileSize;
-	GetFileSizeEx(hFile, &fileSize);
-
-	char* buffer = new char[fileSize.QuadPart + 1];
-
-	DWORD read;
-	ReadFile(
-		hFile,
-		buffer,
-		fileSize.QuadPart,
-		&read,
-		NULL
-	);
-
-	buffer[read] = '\0';
-
-	std::string buffer_s;
-	buffer_s.append(buffer);
-	delete[] buffer;
+	string buffer_s = file->ReadText();
 
 	globals->editBox.Document().SetText(TextSetOptions::None, to_hstring(buffer_s));
 
@@ -470,8 +434,7 @@ void ModernNotepad::SaveDocumentAs()
 		size_t dummy;
 		wcstombs_s(&dummy, mbFileName, ofn.nMaxFile + 1, ofn.lpstrFile, ofn.nMaxFile);
 
-		std::string fileName;
-		fileName.append(mbFileName);
+		std::string fileName(mbFileName);
 		delete[] mbFileName;
 		free(ofn.lpstrFile);
 
@@ -491,43 +454,28 @@ void ModernNotepad::SaveDocument()
 		return;
 	}
 
-	HANDLE hFile = CreateFileA(
-		this->fileName.c_str(),
-		FILE_READ_ACCESS | FILE_WRITE_ACCESS,
-		FILE_SHARE_READ,
-		NULL,
-		CREATE_ALWAYS,
-		NULL,
-		NULL
-	);
+	ModernNotepadFile* file = new ModernNotepadFile(this->fileName, true);
 
-	if (hFile == INVALID_HANDLE_VALUE)
+	if (!file->FileExists())
 	{
 		MessageBox(this->hwnd, L"There was an error trying to create the file.", L"Error", MB_ICONERROR);
+		delete file;
 		return;
 	}
 
 	this->originalText = this->GetEditBoxContent();
 	const char* buffer = this->originalText.c_str();
 
-	DWORD written;
-	WriteFile(
-		hFile,
-		buffer,
-		strlen(buffer) - 1, // Ignore the last character in a RichEditBox
-		&written,
-		NULL
-	);
+	//
+	// Trim the last return character off the output
+	//
+	string buffer_s(buffer);
+	buffer_s = buffer_s.substr(0, buffer_s.length() - 1);
 
-	if (written != strlen(buffer) - 1)
-	{
-		//
-		// We should never have this issue, unless an access problem has occured.
-		//
-		MessageBox(this->hwnd, L"There was an error trying to write to the file.", L"Error", MB_ICONERROR);
-	}
+	file->WriteText(buffer_s);
+	file->Flush();
 
-	CloseHandle(hFile);
+	delete file;
 	this->changesMade = FALSE;
 }
 
@@ -538,58 +486,54 @@ void ModernNotepad::WriteSettings()
 	strcpy_s(settings.FontFamily, 33, to_string(globals->editBox.FontFamily().Source()).c_str());
 	settings.FontSize = static_cast<int>(globals->editBox.FontSize());
 
-	HANDLE hFile = CreateFileA(
-		"settings.dat",
-		FILE_READ_ACCESS | FILE_WRITE_ACCESS,
-		FILE_SHARE_READ,
-		NULL,
-		CREATE_ALWAYS,
-		NULL,
-		NULL
-	);
+	ModernNotepadFile* file = new ModernNotepadFile("settings.dat", true);
 
-	if (hFile == INVALID_HANDLE_VALUE)
+	if (!file->FileExists())
+	{
+		delete file;
 		return;
+	}
 
+	//
+	// Write non-text data using WriteFile()
+	//
 	DWORD dummy;
 	WriteFile(
-		hFile,
+		file->GetHandle(),
 		(LPVOID)&settings,
 		sizeof(settings),
 		&dummy,
 		NULL
 	);
 
-	CloseHandle(hFile);
+	delete file;
 }
 
 void ModernNotepad::ReadSettings()
 {
 	MODERN_NOTEPAD_SETTINGS settings;
 
-	HANDLE hFile = CreateFileA(
-		"settings.dat",
-		FILE_READ_ACCESS,
-		FILE_SHARE_READ,
-		NULL,
-		OPEN_EXISTING,
-		NULL,
-		NULL
-	);
+	ModernNotepadFile* file = new ModernNotepadFile("settings.dat", false);
 
-	if (hFile == INVALID_HANDLE_VALUE)
+	if (!file->FileExists())
+	{
+		delete file;
 		return;
+	}
 
+	//
+	// Read non-text data using ReadFile()
+	//
 	DWORD dummy;
 	ReadFile(
-		hFile,
+		file->GetHandle(),
 		(LPVOID)&settings,
 		sizeof(settings),
 		&dummy,
 		NULL
 	);
 
-	CloseHandle(hFile);
+	delete file;
 
 	if (strcmp(settings.Header, "MN") != 0)
 		return;
@@ -723,8 +667,7 @@ void ModernNotepad::OnFontMenuItemClick(Windows::Foundation::IInspectable const&
 		size_t dummy;
 		wcstombs_s(&dummy, mbFontFamily, lstrlenW(logFont.lfFaceName) + 1, logFont.lfFaceName, lstrlenW(logFont.lfFaceName));
 
-		std::string fontFamily;
-		fontFamily.append(mbFontFamily);
+		std::string fontFamily(mbFontFamily);
 		int fontSize = chooseFont.iPointSize / 10;
 
 		globals->editBox.FontFamily(Media::FontFamily(to_hstring(fontFamily)));
